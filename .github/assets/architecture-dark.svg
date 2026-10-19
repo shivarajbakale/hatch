@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" role="img" aria-label="hatch deploy builds your app and provisions everything in your own AWS account across regions">
+<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#A1A1AA"/></marker></defs>
+<style>.t{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;fill:#FAFAF9}.s{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;fill:#A1A1AA;font-size:13px}.m{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;fill:#A1A1AA}</style>
+<rect x="16" y="110" width="220" height="200" rx="14" fill="#18181B" stroke="#3F3F46"/>
+<text class="t" x="36" y="142" font-size="15" font-weight="600">Your app</text>
+<text class="m" x="36" y="174">import { serve, kv, secret }</text>
+<text class="m" x="36" y="193">  from "hatch"</text>
+<text class="m" x="36" y="231">const db = kv("sessions")</text>
+<text class="m" x="36" y="250">const key = secret("API_KEY")</text>
+<text class="m" x="36" y="288">serve(app)</text>
+<path d="M236 210H300" stroke="#A1A1AA" stroke-width="1.5" marker-end="url(#ar)"/>
+<rect x="304" y="130" width="196" height="160" rx="14" fill="#18181B" stroke="#FF5A1F" stroke-width="2"/>
+<text class="t" x="324" y="162" font-size="15" font-weight="600" style="font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">hatch deploy</text>
+<circle cx="330" cy="189" r="3" fill="#FF5A1F"/><text class="s" x="342" y="193">bundle with esbuild</text>
+<circle cx="330" cy="213" r="3" fill="#FF5A1F"/><text class="s" x="342" y="217">find kv() + secret()</text>
+<circle cx="330" cy="237" r="3" fill="#FF5A1F"/><text class="s" x="342" y="241">provision + least-priv IAM</text>
+<circle cx="330" cy="261" r="3" fill="#FF5A1F"/><text class="s" x="342" y="265">new revision, shift traffic</text>
+<path d="M500 210H556" stroke="#A1A1AA" stroke-width="1.5" marker-end="url(#ar)"/>
+<rect x="560" y="16" width="384" height="388" rx="16" fill="none" stroke="#3F3F46" stroke-dasharray="5 5"/>
+<text class="t" x="584" y="46" font-size="15" font-weight="600">Your AWS account</text>
+<rect x="584" y="64" width="336" height="44" rx="10" fill="#FF5A1F" fill-opacity="0.12" stroke="#FF5A1F"/>
+<text class="t" x="752" y="91" text-anchor="middle" font-size="13.5" font-weight="600">One global URL · latency-based routing</text>
+<path d="M636 108V130" stroke="#A1A1AA" stroke-width="1.5" marker-end="url(#ar)"/>
+<rect x="584" y="134" width="104" height="164" rx="12" fill="#18181B" stroke="#3F3F46"/>
+<text class="s" x="636" y="156" text-anchor="middle" style="font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px">us-east-1</text>
+<rect x="594" y="168" width="84" height="52" rx="8" fill="none" stroke="#FF5A1F" stroke-width="1.5"/>
+<text class="t" x="636" y="190" text-anchor="middle" font-size="12.5" font-weight="600">Web</text><text class="t" x="636" y="207" text-anchor="middle" font-size="12.5" font-weight="600">Function</text>
+<rect x="594" y="230" width="84" height="56" rx="8" fill="none" stroke="#3F3F46"/>
+<text class="s" x="636" y="253" text-anchor="middle" style="font-size:12px">kv replica</text><text class="s" x="636" y="270" text-anchor="middle" style="font-size:12px">DynamoDB</text>
+<path d="M752 108V130" stroke="#A1A1AA" stroke-width="1.5" marker-end="url(#ar)"/>
+<rect x="700" y="134" width="104" height="164" rx="12" fill="#18181B" stroke="#3F3F46"/>
+<text class="s" x="752" y="156" text-anchor="middle" style="font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px">eu-west-1</text>
+<rect x="710" y="168" width="84" height="52" rx="8" fill="none" stroke="#FF5A1F" stroke-width="1.5"/>
+<text class="t" x="752" y="190" text-anchor="middle" font-size="12.5" font-weight="600">Web</text><text class="t" x="752" y="207" text-anchor="middle" font-size="12.5" font-weight="600">Function</text>
+<rect x="710" y="230" width="84" height="56" rx="8" fill="none" stroke="#3F3F46"/>
+<text class="s" x="752" y="253" text-anchor="middle" style="font-size:12px">kv replica</text><text class="s" x="752" y="270" text-anchor="middle" style="font-size:12px">DynamoDB</text>
+<path d="M868 108V130" stroke="#A1A1AA" stroke-width="1.5" marker-end="url(#ar)"/>
+<rect x="816" y="134" width="104" height="164" rx="12" fill="#18181B" stroke="#3F3F46"/>
+<text class="s" x="868" y="156" text-anchor="middle" style="font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:10.5px">ap-northeast-1</text>
+<rect x="826" y="168" width="84" height="52" rx="8" fill="none" stroke="#FF5A1F" stroke-width="1.5"/>
+<text class="t" x="868" y="190" text-anchor="middle" font-size="12.5" font-weight="600">Web</text><text class="t" x="868" y="207" text-anchor="middle" font-size="12.5" font-weight="600">Function</text>
+<rect x="826" y="230" width="84" height="56" rx="8" fill="none" stroke="#3F3F46"/>
+<text class="s" x="868" y="253" text-anchor="middle" style="font-size:12px">kv replica</text><text class="s" x="868" y="270" text-anchor="middle" style="font-size:12px">DynamoDB</text>
+<rect x="584" y="318" width="336" height="64" rx="10" fill="#18181B" stroke="#3F3F46"/>
+<text class="s" x="752" y="345" text-anchor="middle">S3 artifacts · IAM role · SSM secrets</text>
+<text class="s" x="752" y="366" text-anchor="middle">CloudWatch logs, merged by hatch logs</text>
+</svg>

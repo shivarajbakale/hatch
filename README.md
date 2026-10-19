@@ -1,134 +1,279 @@
-# Hatch
+<div align="center">
 
-Deploy a Node web server to [AWS Lambda Web Functions](https://aws.amazon.com/blogs/aws/announcing-aws-lambda-web-functions-for-fast-consistent-web-app-performance-anywhere/) in your own AWS account with one command. Hatch handles the parts around the deploy: bundling, the execution role, key-value storage, secrets, multi-region endpoints, canary releases, rollback and logs from every region.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/logo-dark.svg">
+  <img alt="Hatch" src=".github/assets/logo-light.svg" height="72">
+</picture>
+
+<h3>Deploy Node apps to every region. From your own AWS account.</h3>
+
+<p>
+Hatch turns any Hono or Express server into a globally routed<br>
+<a href="https://aws.amazon.com/blogs/aws/announcing-aws-lambda-web-functions-for-fast-consistent-web-app-performance-anywhere/">AWS Lambda Web Function</a>, with storage, secrets, canaries and logs built in.
+</p>
+
+<p>
+<a href="#quickstart"><b>Quickstart</b></a> ·
+<a href="#how-it-works"><b>How it works</b></a> ·
+<a href="#commands"><b>Commands</b></a> ·
+<a href="#roadmap"><b>Roadmap</b></a>
+</p>
+
+<p>
+<img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-FF5A1F?style=flat-square">
+<img alt="Node 24+" src="https://img.shields.io/badge/node-%E2%89%A524-0B0B0F?style=flat-square&logo=nodedotjs&logoColor=white">
+<img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-0B0B0F?style=flat-square&logo=typescript&logoColor=white">
+<img alt="Status: alpha" src="https://img.shields.io/badge/status-alpha-FACC15?style=flat-square">
+</p>
+
+<br>
+
+<img alt="hatch deploy in a terminal" src=".github/assets/demo.svg" width="760">
+
+</div>
+
+<br>
+
+## Why Hatch
+
+Lambda Web Functions run a normal Node HTTP server, scale to zero, and route each user to the nearest region. AWS ships a one-line deploy for a single function. A real app needs more than that: a database, secrets, a release process and readable logs. Hatch is that missing layer.
+
+<table>
+<tr>
+<td width="33%" valign="top">
+
+**🌍 Global by default**<br>
+List three regions and get one URL with latency-based routing. Your `kv()` stores become DynamoDB global tables automatically.
+
+</td>
+<td width="33%" valign="top">
+
+**🔒 Your account, your data**<br>
+No platform in the middle and no markup. Everything Hatch creates is a normal AWS resource you can see, tag and keep.
+
+</td>
+<td width="33%" valign="top">
+
+**⚡ Infrastructure from code**<br>
+Write `kv("sessions")` or `secret("STRIPE_KEY")`. Hatch reads your code and provisions exactly that, with a least-privilege IAM role.
+
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+**🐤 Canary releases**<br>
+Send 10% of traffic to a new revision, watch the logs, then `promote` or `rollback` in seconds.
+
+</td>
+<td valign="top">
+
+**🔭 One log stream**<br>
+`hatch logs` tails every region at once, merged and colour-coded, filterable by status, path or request id.
+
+</td>
+<td valign="top">
+
+**🩺 Doctor**<br>
+`hatch doctor` flags code that breaks on serverless (`app.listen`, in-memory state, timers, disk writes) before you ship it.
+
+</td>
+</tr>
+</table>
+
+## Quickstart
 
 ```bash
-npm create hatch@latest my-app      # or: --template express
+npm create hatch@latest my-app        # Hono by default, or --template express
 cd my-app && npm install
-npx hatch dev                       # http://127.0.0.1:3000, reloads on save
-npx hatch deploy                    # https://<id>.lambda-web.us-east-1.on.aws
+
+npx hatch dev                         # http://127.0.0.1:3000, reloads on save
+npx hatch deploy                      # live HTTPS URL in your AWS account
 ```
 
-> Name check: `hatch` is already taken on npm and Python's Hatch uses the name. Rename before publishing.
+You need Node 24+ and AWS credentials (`aws configure`, `AWS_PROFILE`, or SSO). Hatch deploys to `us-east-1` unless you pick a region.
 
-## Your code
+Already have an Express app? Replace one line:
+
+```diff
+- app.listen(3000);
++ serve(app); // import { serve } from "hatch"
+```
+
+## Write your app
 
 ```ts
 import { Hono } from "hono";
-import { kv, log, secret, region, serve } from "hatch";
+import { kv, log, region, secret, serve } from "hatch";
 
 const app = new Hono();
-const cache = kv<User>("users");            // DynamoDB table, created on deploy
-const stripe = new Stripe(secret("STRIPE_KEY")); // from SSM, set with `hatch secrets set`
+const carts = kv<Cart>("carts");                // DynamoDB, global across your regions
+const stripe = new Stripe(secret("STRIPE_KEY")); // SSM SecureString, set with `hatch secrets set`
 
-app.get("/user/:id", async (c) => {
-  const user = await cache.get(c.req.param("id"));
-  log.info("user lookup", { hit: Boolean(user), region: region.current });
-  return c.json(user ?? null);
+app.get("/cart/:id", async (c) => {
+  const cart = await carts.get(c.req.param("id"));
+  log.info("cart viewed", { items: cart?.items.length ?? 0, region: region.current });
+  return c.json(cart ?? { items: [] });
 });
 
-serve(app); // binds AWS_LAMBDA_HTTP_ENDPOINT in AWS, PORT locally
+app.post("/cart/:id", async (c) => {
+  await carts.set(c.req.param("id"), await c.req.json(), { ttl: 60 * 60 * 24 });
+  return c.body(null, 204);
+});
+
+serve(app);
 ```
 
-- **`serve(app)`** takes any fetch-style app (Hono) or Node handler (Express, Connect). It binds where Lambda says, streams responses (SSE, LLM tokens), logs one JSON line per request, and shuts down cleanly on SIGTERM. For an existing Express app, replace `app.listen(3000)` with `serve(app)`.
-- **`kv(name)`** is a key-value store with `get`, `set(key, value, { ttl })` and `delete`. Deploy creates a DynamoDB table per stage. With more than one region it becomes a global table. Under `hatch dev` it's a file in `.hatch/dev/`.
-- **`secret(NAME)`** reads a secret. Deploy copies the secrets your code references from SSM Parameter Store into the revision's encrypted environment. Under `hatch dev` they come from `.env`.
-- **`log.info/warn/error/debug(msg, fields)`** writes structured JSON with the request id, region, stage and deploy id attached automatically. Keys like `password`, `token` and `authorization` are redacted.
+| API | What you get | In AWS | Under `hatch dev` |
+| --- | --- | --- | --- |
+| `serve(app)` | Runs any fetch app (Hono) or Node handler (Express). Streams responses, logs every request, shuts down cleanly | Binds `AWS_LAMBDA_HTTP_ENDPOINT` | Binds `PORT` |
+| `kv(name)` | `get`, `set` with `ttl`, `delete` | DynamoDB table per stage; global table across regions | JSON file in `.hatch/dev` |
+| `secret(NAME)` | A string, read synchronously | SSM, copied into the encrypted environment at deploy | `.env` |
+| `log.info(msg, fields)` | Structured JSON with request id, region, stage and deploy id; passwords and tokens redacted | CloudWatch Logs | Pretty-printed |
+| `region.current` | The region serving this request | `eu-west-1`, … | `local` |
 
-Hatch finds `kv("…")` and `secret("…")` calls by parsing your source at deploy time, so names must be string literals.
+## How it works
 
-## Config (optional)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/architecture-dark.svg">
+  <img alt="hatch deploy bundles your app, finds the resources it uses, provisions them in your AWS account and routes traffic across regions" src=".github/assets/architecture-light.svg">
+</picture>
+
+One `hatch deploy`:
+
+1. **Bundles** your server with esbuild into one ESM file and a content-hashed zip. If nothing changed, nothing is uploaded.
+2. **Reads your code** with a real parser (oxc) to find every `kv()` and `secret()` call.
+3. **Provisions** what it found: a private artifact bucket, DynamoDB tables with replicas in your other regions, and an IAM role that can touch only those tables and its own logs.
+4. **Creates a revision** on the `nodejs24.x` runtime and **moves traffic** to it, all at once or as a canary. Weights are always set explicitly, so a rollback is one API call.
+
+Each stage (`dev`, `prod`, `pr-42`) is its own function, URL, tables and secrets.
+
+## Global in one line
 
 ```ts
 // hatch.config.ts
 import { defineConfig } from "hatch";
 
 export default defineConfig({
-  name: "my-app",
-  regions: ["us-east-1", "eu-west-1", "ap-northeast-1"], // first = home region
-  timeoutSeconds: 30,
-  maxConcurrency: 64,
-  env: { LOG_FORMAT: "json" },
+  regions: ["us-east-1", "eu-west-1", "ap-northeast-1"], // first one is home
   stages: {
-    prod: { canary: 10 },
+    prod: { canary: 10 },                                // every prod deploy starts at 10%
   },
 });
 ```
 
-One region gives a `HomeRegion` endpoint. Several give a `MultiRegion` endpoint with one URL, latency-based routing and global kv tables. Without a config file, Hatch uses `package.json`'s name, finds `src/index.ts` (or `server.ts`, `index.js`, …), and deploys to `AWS_REGION` or `us-east-1`.
+One region gives a `HomeRegion` endpoint. Several give a `MultiRegion` endpoint: one URL, each request served from the closest region, and `kv()` data replicated between them.
+
+## Ship safely
+
+```bash
+hatch deploy --stage prod                  # new revision gets 10%, the rest stays put
+hatch status --stage prod                  # traffic split, revisions, regional URLs
+hatch logs --stage prod --status 5xx       # errors only, every region, live
+hatch promote --stage prod                 # 100% to the new revision
+hatch rollback --stage prod                # or straight back to the stable one
+```
+
+Hatch tells stable from canary by revision age, never by traffic share, so a canary at 80% is still rolled back correctly.
 
 ## Commands
 
-| Command | What it does |
+| Command | |
 | --- | --- |
-| `hatch dev [--port 3000]` | Local server with rebuild on save, local kv and `.env` secrets |
-| `hatch build` | Bundle into `.hatch/build/` and list the resources found |
-| `hatch deploy [--stage dev] [--canary 10] [--regions a,b]` | Build, provision and deploy, then print the URL |
-| `hatch status` | URL, traffic split, revisions and regional endpoints |
-| `hatch logs [--status 5xx] [--request id] [--path /x] [--level error] [--since 1h]` | Live tail across all regions, or history with `--since` |
+| `hatch dev` | Local server with rebuild on save, local `kv`, `.env` secrets |
+| `hatch build` | Bundle into `.hatch/build` and list the resources found |
+| `hatch deploy` | Build, provision, deploy, print the URL. `--canary 10`, `--regions a,b` |
+| `hatch status` | URL, traffic split, recent revisions, regional endpoints |
+| `hatch logs` | Live tail across regions, or history with `--since 1h`. Filter with `--status 5xx`, `--path`, `--request`, `--level` |
 | `hatch promote` | Move the canary to 100% |
-| `hatch rollback [--to rev]` | End a canary, or go back to the previous revision |
-| `hatch secrets set NAME [value]` / `list` / `rm NAME` | Manage secrets per stage. A value from stdin stays out of shell history |
-| `hatch doctor` | Find code that breaks on Lambda: `app.listen`, module-level Maps, `setInterval`, local disk writes, WebSockets, native modules |
-| `hatch destroy [--purge-data] [--yes]` | Delete the function, endpoint and role. kv data is kept unless `--purge-data` |
+| `hatch rollback` | End a canary, or go back to the previous revision (`--to <id>`) |
+| `hatch secrets` | `set NAME [value]` (stdin keeps it out of shell history), `list`, `rm` |
+| `hatch doctor` | Find code that breaks on Lambda before you deploy it |
+| `hatch destroy` | Remove the function, endpoint and role. `--purge-data` also deletes kv tables |
 
-Every command takes `--stage` (default `dev`). Stages are separate functions: `my-app-dev`, `my-app-prod`, `my-app-pr-42`.
+Every command takes `--stage` (default `dev`).
 
-## What a deploy creates
+## Previews for every pull request
 
-In the home region, all tagged `hatch:app` and `hatch:stage`:
+`npm create hatch` adds a GitHub Actions workflow:
 
-1. **Artifact bucket** `hatch-artifacts-<account>-<region>`: private, and old zips expire after 30 days. Zips are content-addressed, so an unchanged build isn't uploaded again.
-2. **DynamoDB table** `<app>-<stage>-kv-<name>` for each `kv()`: on-demand billing, TTL on, and replicas in your other regions.
-3. **IAM role** `hatch-<app>-<stage>`: can write its own log group and read/write only its own kv tables.
-4. **Web function** `<app>-<stage>` with endpoint `main` on runtime `nodejs24.x`. Each deploy is a new revision, and Hatch sets the traffic weights explicitly (`autoDeploymentMode: Disabled`), so canaries and rollbacks are always deliberate.
-
-## Canary releases
-
-With `canary: 10` on a stage (or `--canary 10`), a deploy sends 10% of traffic to the new revision and leaves 90% on the current one. Then:
-
-```bash
-hatch status --stage prod                   # see the split
-hatch logs --stage prod --status 5xx        # watch errors
-hatch promote --stage prod                  # 100% to the new revision
-hatch rollback --stage prod                 # or back to the stable revision
-```
-
-## CI: previews per PR
-
-`create-hatch` adds `.github/workflows/hatch.yml`:
-
-- Each PR deploys to stage `pr-<number>` and gets the URL as a comment.
+- Each PR deploys to its own stage and gets the URL as a comment.
 - Closing the PR destroys that stage.
-- Pushing to `main` deploys `prod`.
+- Merging to `main` deploys `prod`.
 
-It needs an IAM role GitHub can assume through OIDC, stored as the `AWS_DEPLOY_ROLE_ARN` secret. It runs on an Arm64 runner, which matches the Lambda runtime.
+It authenticates with GitHub OIDC, so there are no long-lived AWS keys in CI.
 
-## Repo layout
+## Compared with
 
-```
-packages/hatch          CLI (`hatch`) + runtime SDK (`import … from "hatch"`)
-  src/runtime/          serve, log, kv, secret, region, defineConfig
-  src/build/            project loading, esbuild bundling, resource analysis, doctor
-  src/aws/              S3, IAM, DynamoDB, SSM, CloudWatch Logs, Lambda Web
-  src/deploy.ts         deploy / status / promote / rollback / destroy
-  src/cli/              commands
-packages/create-hatch   `npm create hatch` scaffolder + Hono/Express templates
-examples/hono-app       generated from the Hono template
-```
+| | Hatch | `aws lambda-web deploy` | Hosted platforms |
+| --- | :---: | :---: | :---: |
+| Runs in your AWS account | ✅ | ✅ | ❌ |
+| Multi-region with one URL | ✅ | ✅ | varies |
+| Database and secrets from code | ✅ | ❌ | add-ons |
+| Least-privilege IAM, generated | ✅ | ❌ | n/a |
+| Canary, promote, rollback | ✅ | manual weights | varies |
+| Logs merged across regions | ✅ | ❌ | ✅ |
+| Local dev that matches production | ✅ | ❌ | ✅ |
+| Platform markup on compute | none | none | yes |
+
+## Roadmap
+
+Hatch is **alpha**. The CLI, runtime and deploy flows are covered by tests against mocked AWS APIs. The first deploys against real accounts are next, and so is publishing to npm.
+
+- [x] `serve`, `kv`, `secret`, `log`, `region`
+- [x] Multi-region endpoints and global kv tables
+- [x] Canary, promote, rollback
+- [x] Logs merged across regions, live and historical
+- [x] `doctor`, `create-hatch`, PR preview workflow
+- [ ] Verified on real AWS accounts, published to npm
+- [ ] Static assets on S3 + CloudFront, custom domains
+- [ ] Next.js adapter
+- [ ] `queue()`, `cron()`, `bucket()`
+- [ ] `sandbox()` on Lambda MicroVMs, for running untrusted code
+- [ ] OpenTelemetry traces, alarm-driven automatic rollback
+- [ ] MCP server so coding agents can deploy, read logs and roll back
+
+Have an opinion on the order? [Open an issue](../../issues).
+
+<details>
+<summary><b>Assumptions to confirm on the first real deploys</b></summary>
+<br>
+
+- **Execution role trust principal.** The launch docs don't name one for Web Functions. Hatch uses `lambda.amazonaws.com`; set `roleTrustPrincipal` in `hatch.config.ts` if AWS asks for another.
+- **Start command.** The API takes a code artifact in S3. Hatch ships `index.js` plus a `package.json` with `"start": "node index.js"`, which covers both likely conventions.
+- **Log group.** Hatch reads `/aws/lambda/web/<function>`, the documented default, in each region.
+
+</details>
+
+## Contributing
 
 ```bash
 pnpm install
 pnpm build
-pnpm test        # runtime, bundling (runs the real artifact), mocked-AWS deploy flows, scaffolder
+pnpm test        # runtime, the real built artifact, mocked-AWS deploy flows, scaffolder
 ```
 
-## Status and known gaps
+```
+packages/hatch          CLI + runtime SDK
+  src/runtime/          serve, log, kv, secret, region, defineConfig
+  src/build/            config loading, esbuild bundling, resource analysis, doctor
+  src/aws/              S3, IAM, DynamoDB, SSM, CloudWatch Logs, Lambda Web
+  src/deploy.ts         deploy, status, promote, rollback, destroy
+packages/create-hatch   npm create hatch, with Hono and Express templates
+examples/hono-app       generated from the Hono template
+```
 
-Everything above runs locally and is covered by tests against mocked AWS APIs. **It hasn't yet been deployed to a real AWS account.** These are assumptions to verify on the first real deploy:
+Issues and PRs are welcome. For anything large, open an issue first so we can agree on the shape.
 
-- **Execution role trust principal.** The docs don't name one for Web Functions. Hatch uses `lambda.amazonaws.com`; override with `roleTrustPrincipal` in the config if AWS rejects it.
-- **Artifact format.** The API takes an S3 object. Hatch uploads a zip with `index.js`, `package.json` (`"start": "node index.js"`) and the bundle, which covers both likely start conventions.
-- **Log group.** Hatch assumes the documented default `/aws/lambda/web/<function>`, with the same name in each region of a multi-region endpoint.
+## License
 
-Not built yet (see the plan doc): static assets on S3 and CloudFront, custom domains, the Next.js adapter, `queue()` / `cron()` / `sandbox()`, OpenTelemetry tracing, alarm-driven automatic rollback, and the hosted console.
+[MIT](LICENSE). Not affiliated with Amazon Web Services.
+
+<br>
+
+<div align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/mark-dark.svg">
+  <img alt="" src=".github/assets/mark.svg" width="28">
+</picture>
+</div>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 516" width="920" height="516" role="img" aria-label="hatch deploy in a terminal">
+<style>text{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:15px;white-space:pre}.l{opacity:0;animation:in .01s forwards}@keyframes in{to{opacity:1}}.c{animation:blink 1s steps(1) infinite}@keyframes blink{50%{opacity:0}}@media (prefers-reduced-motion:reduce){.l{opacity:1;animation:none!important}}</style>
+<rect width="920" height="516" rx="14" fill="#0B0B0F"/><rect x=".5" y=".5" width="919" height="515" rx="13.5" fill="none" stroke="#27272A"/>
+<circle cx="24" cy="24" r="6" fill="#3F3F46"/><circle cx="44" cy="24" r="6" fill="#3F3F46"/><circle cx="64" cy="24" r="6" fill="#3F3F46"/>
+<text x="460.0" y="29" text-anchor="middle" fill="#71717A" style="font-size:13px">hatch</text>
+<text class="l" x="24" y="70" style="animation-delay:0.65s"><tspan fill="#71717A">~/my-app</tspan><tspan fill="#FF5A1F"> $ </tspan><tspan fill="#E4E4E7">npx hatch deploy --stage prod</tspan></text>
+<text class="l" x="24" y="96" style="animation-delay:1.55s"><tspan fill="#E4E4E7">Deploying my-app → prod </tspan><tspan fill="#71717A">(us-east-1, eu-west-1, ap-northeast-1)</tspan></text>
+<text class="l" x="24" y="122" style="animation-delay:1.90s"><tspan fill="#67E8F9">› </tspan><tspan fill="#E4E4E7">Building src/index.ts (hono)</tspan></text>
+<text class="l" x="24" y="148" style="animation-delay:2.25s"><tspan fill="#67E8F9">› </tspan><tspan fill="#E4E4E7">Uploading artifact</tspan></text>
+<text class="l" x="24" y="174" style="animation-delay:2.60s"><tspan fill="#67E8F9">› </tspan><tspan fill="#E4E4E7">kv(&quot;sessions&quot;) → DynamoDB my-app-prod-kv-sessions </tspan><tspan fill="#71717A">(global)</tspan></text>
+<text class="l" x="24" y="200" style="animation-delay:2.95s"><tspan fill="#67E8F9">› </tspan><tspan fill="#E4E4E7">Reading 1 secret(s) from SSM</tspan></text>
+<text class="l" x="24" y="226" style="animation-delay:3.30s"><tspan fill="#67E8F9">› </tspan><tspan fill="#E4E4E7">Execution role</tspan></text>
+<text class="l" x="24" y="252" style="animation-delay:3.65s"><tspan fill="#67E8F9">› </tspan><tspan fill="#E4E4E7">Canary: 10% to the new revision, 90% stays on r-7f3a</tspan></text>
+<text class="l" x="24" y="278" style="animation-delay:4.00s"><tspan fill="#4ADE80">✓ </tspan><tspan fill="#E4E4E7">Built 612 KB · kv: sessions · secrets: STRIPE_KEY</tspan></text>
+<text class="l" x="24" y="304" style="animation-delay:4.35s"><tspan fill="#4ADE80">✓ </tspan><tspan fill="#E4E4E7">Revision r-9c21 live</tspan></text>
+<text class="l" x="24" y="330" style="animation-delay:4.70s"> </text>
+<text class="l" x="24" y="356" style="animation-delay:5.30s"><tspan fill="#4ADE80">  https://k2x9.lambda-web.global.on.aws</tspan></text>
+<text class="l" x="24" y="382" style="animation-delay:5.65s"> </text>
+<text class="l" x="24" y="408" style="animation-delay:6.00s"><tspan fill="#71717A">~/my-app</tspan><tspan fill="#FF5A1F"> $ </tspan><tspan fill="#E4E4E7">npx hatch logs --stage prod</tspan></text>
+<text class="l" x="24" y="434" style="animation-delay:6.90s"><tspan fill="#71717A">12:04:18 </tspan><tspan fill="#C084FC">euw1  </tspan><tspan fill="#FACC15">404 </tspan><tspan fill="#E4E4E7">GET    /api/users/42 </tspan><tspan fill="#71717A">18ms</tspan></text>
+<text class="l" x="24" y="460" style="animation-delay:7.25s"><tspan fill="#71717A">12:04:19 </tspan><tspan fill="#C084FC">apne1 </tspan><tspan fill="#4ADE80">200 </tspan><tspan fill="#E4E4E7">POST   /api/checkout </tspan><tspan fill="#71717A">212ms </tspan><tspan fill="#60A5FA">cold</tspan></text>
+<rect class="l c" x="24" y="472" width="9" height="17" fill="#FF5A1F" style="animation:in .01s 7.55s forwards, blink 1s steps(1) 7.55s infinite"/>
+</svg>
