@@ -47,8 +47,11 @@ function isFetchApp(target: ServeTarget): target is FetchApp {
 }
 
 function toRequest(req: http.IncomingMessage, host: string): Request {
+  // Behind hatch's CloudFront front door, Host is the function's own domain; the viewer's domain
+  // arrives in x-forwarded-host (set by a CloudFront Function, so viewers can't spoof it there).
+  const forwarded = process.env.HATCH_FRONT_DOOR ? req.headers["x-forwarded-host"] : undefined;
   // Not `new URL(req.url, base)`: a raw path like "//api/users" would be read as a host.
-  const url = new URL(`http://${req.headers.host ?? host}`);
+  const url = new URL(typeof forwarded === "string" && forwarded ? `https://${forwarded}` : `http://${req.headers.host ?? host}`);
   const raw = req.url ?? "/";
   const q = raw.indexOf("?");
   url.pathname = q === -1 ? raw : raw.slice(0, q);

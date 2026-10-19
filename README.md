@@ -15,6 +15,7 @@ Hatch turns any Hono or Express server into a globally routed<br>
 <p>
 <a href="#quickstart"><b>Quickstart</b></a> ·
 <a href="#how-it-works"><b>How it works</b></a> ·
+<a href="#full-stack-on-your-own-domain"><b>Full stack</b></a> ·
 <a href="#commands"><b>Commands</b></a> ·
 <a href="#roadmap"><b>Roadmap</b></a>
 </p>
@@ -145,6 +146,7 @@ One `hatch deploy`:
 2. **Reads your code** with a real parser (oxc) to find every `kv()` and `secret()` call.
 3. **Provisions** what it found: a private artifact bucket, DynamoDB tables with replicas in your other regions, and an IAM role that can touch only those tables and its own logs.
 4. **Creates a revision** on the `nodejs24.x` runtime and **moves traffic** to it, all at once or as a canary. Weights are always set explicitly, so a rollback is one API call.
+5. **Puts CloudFront in front**, when you have a frontend or a domain: static files from a private bucket, server routes to the function, and the certificate and DNS for your domain.
 
 Each stage (`dev`, `prod`, `pr-42`) is its own function, URL, tables and secrets.
 
@@ -163,6 +165,39 @@ export default defineConfig({
 ```
 
 One region gives a `HomeRegion` endpoint. Several give a `MultiRegion` endpoint: one URL, each request served from the closest region, and `kv()` data replicated between them.
+
+## Full stack on your own domain
+
+Add a frontend and a domain, and `hatch deploy` puts CloudFront in front of everything:
+
+```ts
+// hatch.config.ts
+export default defineConfig({
+  static: { dir: "web/dist", build: "npm run build --prefix web" }, // any static build: Vite, Astro, plain HTML
+  routes: ["/api/*"],                                                // default; these go to your server
+  stages: {
+    prod: { domain: "app.example.com" },
+  },
+});
+```
+
+```
+                 app.example.com  (HTTPS, HTTP/3, IPv6)
+                          │
+                      CloudFront
+              ┌───────────┴───────────┐
+          /api/*                  everything else
+   Lambda Web Function       private S3 bucket (your frontend)
+```
+
+- **One domain, no CORS.** The frontend and the API share an origin, so cookies and `fetch("/api/...")` just work.
+- **Certificate and DNS handled.** Hatch requests the ACM certificate. If the domain's zone is in Route 53, it validates it and writes the A/AAAA records. If not, it prints the two DNS records to add.
+- **Never clobbers DNS.** If the domain already points somewhere else, the deploy stops and says so.
+- **Caching done right.** Hashed bundle files (`index-B3x9Kq7a.js`) are cached for a year, `index.html` is revalidated on every request, and the cache is cleared only when files changed.
+- **Single-page apps.** Paths without a file extension serve `index.html` (`spa: false` turns it off). The bucket stays private: only this distribution can read it.
+- **Your server sees the real host.** Behind the front door, `c.req.url` in Hono is `https://app.example.com/...`, not the function's own domain. In Express, `app.set("trust proxy", true)` and read `req.hostname`.
+
+Without `static`, a `domain` still gets a CloudFront front door that sends every path to the server. Locally, run your frontend dev server next to `hatch dev` and point its `/api` proxy at `http://127.0.0.1:3000`.
 
 ## Ship safely
 
@@ -189,7 +224,7 @@ Hatch tells stable from canary by revision age, never by traffic share, so a can
 | `hatch rollback` | End a canary, or go back to the previous revision (`--to <id>`) |
 | `hatch secrets` | `set NAME [value]` (stdin keeps it out of shell history), `list`, `rm` |
 | `hatch doctor` | Find code that breaks on Lambda before you deploy it |
-| `hatch destroy` | Remove the function, endpoint and role. `--purge-data` also deletes kv tables |
+| `hatch destroy` | Remove the function, endpoint, role and front door (distribution, site bucket, hatch's certificate and DNS records). `--purge-data` also deletes kv tables |
 
 Every command takes `--stage` (default `dev`).
 
@@ -213,6 +248,7 @@ It authenticates with GitHub OIDC, so there are no long-lived AWS keys in CI.
 | Least-privilege IAM, generated | ✅ | ❌ | n/a |
 | Canary, promote, rollback | ✅ | manual weights | varies |
 | Logs merged across regions | ✅ | ❌ | ✅ |
+| Frontend + API on one custom domain | ✅ | ❌ | ✅ |
 | Local dev that matches production | ✅ | ❌ | ✅ |
 | Platform markup on compute | none | none | yes |
 
@@ -225,8 +261,9 @@ Hatch is **alpha**. The CLI, runtime and deploy flows are covered by tests again
 - [x] Canary, promote, rollback
 - [x] Logs merged across regions, live and historical
 - [x] `doctor`, `create-hatch`, PR preview workflow
+- [x] Static frontends on S3 + CloudFront, custom domains with automatic HTTPS and Route 53 DNS
 - [ ] Verified on real AWS accounts, published to npm
-- [ ] Static assets on S3 + CloudFront, custom domains
+- [ ] Full-stack template (Vite + Hono)
 - [ ] Next.js adapter
 - [ ] `queue()`, `cron()`, `bucket()`
 - [ ] `sandbox()` on Lambda MicroVMs, for running untrusted code
@@ -242,6 +279,7 @@ Have an opinion on the order? [Open an issue](../../issues).
 - **Execution role trust principal.** The launch docs don't name one for Web Functions. Hatch uses `lambda.amazonaws.com`; set `roleTrustPrincipal` in `hatch.config.ts` if AWS asks for another.
 - **Start command.** The API takes a code artifact in S3. Hatch ships `index.js` plus a `package.json` with `"start": "node index.js"`, which covers both likely conventions.
 - **Log group.** Hatch reads `/aws/lambda/web/<function>`, the documented default, in each region.
+- **Web function as a CloudFront origin.** The front door calls the endpoint's own HTTPS domain with its own Host header, like any custom origin. Requests can still reach that domain directly; the function URL stays public.
 
 </details>
 

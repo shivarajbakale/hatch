@@ -22,6 +22,7 @@ export interface Stage {
   env: Record<string, string>;
   /** Web function name: `${app}-${stage}`. */
   functionName: string;
+  domain?: string;
 }
 
 const CONFIG_FILES = ["hatch.config.ts", "hatch.config.mts", "hatch.config.js", "hatch.config.mjs"];
@@ -74,9 +75,14 @@ export async function loadProject(root: string): Promise<Project> {
   if (framework === "next") {
     throw new HatchError("Next.js needs the hatch Next adapter, which isn't built yet. Hono, Express, Fastify and plain Node servers work today.");
   }
+  for (const route of config.routes ?? []) {
+    if (!route.startsWith("/")) throw new HatchError(`routes entries are CloudFront path patterns starting with "/", got "${route}".`);
+  }
+  if (config.static && !config.static.dir) throw new HatchError('static.dir is required, for example static: { dir: "web/dist" }.');
   return { root, name, entry, framework, config, pkg };
 }
 
+const DOMAIN = /^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 const STAGE_NAME = /^[a-z0-9][a-z0-9-]{0,19}$/;
 
 export function resolveStage(project: Project, stageName: string, regionOverride?: string[]): Stage {
@@ -91,6 +97,8 @@ export function resolveStage(project: Project, stageName: string, regionOverride
   if (new Set(regions).size !== regions.length) throw new HatchError("regions contains duplicates.");
   const canary = stageConfig.canary;
   if (canary !== undefined && !(canary >= 1 && canary <= 99)) throw new HatchError("canary must be between 1 and 99.");
+  const domain = stageConfig.domain?.toLowerCase().replace(/\.$/, "");
+  if (domain !== undefined && !DOMAIN.test(domain)) throw new HatchError(`"${stageConfig.domain}" isn't a valid domain name.`);
   return {
     name: stageName,
     regions,
@@ -98,6 +106,7 @@ export function resolveStage(project: Project, stageName: string, regionOverride
     canary,
     env: { ...project.config.env, ...stageConfig.env },
     functionName: `${project.name}-${stageName}`,
+    ...(domain ? { domain } : {}),
   };
 }
 

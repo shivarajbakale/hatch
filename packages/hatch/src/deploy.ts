@@ -22,6 +22,7 @@ import {
 } from "./aws/webfn.js";
 import { buildProject, zipBuild, type BuildResult } from "./build/bundle.js";
 import { HatchError, type Project, type Stage } from "./build/project.js";
+import { buildStatic, deployFrontDoor, destroyFrontDoor, frontDoorStatus, wantsFrontDoor, type FrontDoorResult } from "./frontdoor.js";
 import { kvEnvVar, kvTableName } from "./runtime/kv.js";
 import { secretEnvVar } from "./runtime/secret.js";
 
@@ -31,10 +32,15 @@ export interface DeployOptions {
   /** Overrides the stage's canary percent. 0 disables it. */
   canary?: number;
   onStep?: Step;
+  /** How long to wait for a certificate hatch is validating through Route 53. */
+  certificateWaitMs?: number;
 }
 
 export interface DeployResult {
+  /** The address to share: the front door's when there is one, the function's otherwise. */
   url?: string;
+  functionUrl?: string;
+  frontDoor?: FrontDoorResult;
   revisionId: string;
   deployId: string;
   weights: RevisionWeight[];
@@ -97,6 +103,9 @@ export async function deploy(project: Project, stage: Stage, options: DeployOpti
   const step = options.onStep ?? (() => {});
   const warnings: string[] = [];
   const home = stage.homeRegion;
+  const frontDoor = wantsFrontDoor(project, stage);
+  // The frontend builds first: a broken build should stop the deploy before anything changes in AWS.
+  const siteFiles = buildStatic(project, step);
 
   step(`Building ${project.entry} (${project.framework})`);
   // One build folder per stage, so deploying two stages from one checkout can't collide.
@@ -124,6 +133,7 @@ export async function deploy(project: Project, stage: Stage, options: DeployOpti
     HATCH_APP: project.name,
     HATCH_STAGE: stage.name,
     HATCH_DEPLOY_ID: deployId,
+    ...(frontDoor ? { HATCH_FRONT_DOOR: "1" } : {}),
   };
   build.resources.kv.forEach((n, i) => (env[kvEnvVar(n)] = kvTables[i]!));
 
@@ -188,7 +198,24 @@ export async function deploy(project: Project, stage: Stage, options: DeployOpti
     }
   }
 
-  return { url: endpoint ? endpointUrl(endpoint) : undefined, revisionId, deployId, weights, build, firstDeploy: !exists, warnings };
+  const functionUrl = endpoint ? endpointUrl(endpoint) : undefined;
+  let door: FrontDoorResult | undefined;
+  if (frontDoor) {
+    if (!endpoint?.domainName) throw new HatchError("The web function has no domain name yet, so the front door has nothing to point at. Deploy again in a minute.");
+    door = await deployFrontDoor({
+      project,
+      stage,
+      account,
+      functionDomain: endpoint.domainName,
+      files: siteFiles,
+      tags: tags(project, stage),
+      step,
+      certificateWaitMs: options.certificateWaitMs,
+    });
+    warnings.push(...door.warnings);
+  }
+
+  return { url: door?.url ?? functionUrl, functionUrl, frontDoor: door, revisionId, deployId, weights, build, firstDeploy: !exists, warnings };
 }
 
 export interface StatusResult {
@@ -198,12 +225,13 @@ export interface StatusResult {
   revisions: { revisionId: string; state?: string; createdAt?: Date; description?: string }[];
   endpointState?: string;
   regional: Record<string, { domainName?: string; state?: string }>;
+  frontDoor?: { url: string; cloudfrontUrl: string; status?: string; aliases: string[] };
 }
 
 export async function status(stage: Stage): Promise<StatusResult | undefined> {
   const home = stage.homeRegion;
   if (!(await functionExists(home, stage.functionName))) return undefined;
-  const [ep, revisions] = await Promise.all([getEndpoint(home, stage.functionName), listRevisions(home, stage.functionName)]);
+  const [ep, revisions, door] = await Promise.all([getEndpoint(home, stage.functionName), listRevisions(home, stage.functionName), frontDoorStatus(stage)]);
   const regional: StatusResult["regional"] = {};
   for (const [region, r] of Object.entries(ep?.regionalEndpoints ?? {})) regional[region] = { domainName: r.domainName, state: r.state };
   return {
@@ -213,6 +241,7 @@ export async function status(stage: Stage): Promise<StatusResult | undefined> {
     endpointState: ep?.state,
     revisions: revisions.map((r) => ({ revisionId: r.revisionId!, state: r.state, createdAt: r.createdAt, description: r.description })),
     regional,
+    ...(door ? { frontDoor: door } : {}),
   };
 }
 
@@ -256,6 +285,8 @@ export function kvTablePrefix(project: Project, stage: Stage): string {
 
 export async function destroy(project: Project, stage: Stage, opts: { purgeData?: boolean; onStep?: Step } = {}): Promise<void> {
   const step = opts.onStep ?? (() => {});
+  // The front door points at the function, so it goes first.
+  await destroyFrontDoor(stage, await accountId(stage.homeRegion), tags(project, stage), step);
   step(`Deleting web function ${stage.functionName}`);
   const deleted = await deleteFunction(stage.homeRegion, stage.functionName);
   if (!deleted) step("No web function found");

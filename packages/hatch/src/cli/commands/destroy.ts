@@ -6,7 +6,7 @@ import { context, stageArgs } from "../shared.js";
 import { confirm, ui } from "../ui.js";
 
 export default defineCommand({
-  meta: { name: "destroy", description: "Delete a stage's web function and role (kv data is kept unless --purge-data)" },
+  meta: { name: "destroy", description: "Delete a stage's function, role and front door (kv data is kept unless --purge-data)" },
   args: {
     ...stageArgs,
     "purge-data": { type: "boolean", description: "Also delete the stage's kv tables and their data" },
@@ -16,7 +16,7 @@ export default defineCommand({
     const { project, stage } = await context(args);
     const purge = Boolean(args["purge-data"]);
     const tables = purge ? await listKvTables(kvTablePrefix(project, stage), stage.homeRegion, tags(project, stage)) : [];
-    ui.warn(`This deletes ${pc.bold(stage.functionName)}, its endpoint URL and its IAM role.` + (purge ? ` It also deletes these kv tables and all their data: ${tables.join(", ") || "none"}.` : " kv tables and secrets are kept."));
+    ui.warn(`This deletes ${pc.bold(stage.functionName)}, its endpoint URL, its IAM role and, if it has one, its CloudFront front door, static site bucket and the certificate hatch requested${stage.domain ? ` for ${stage.domain}` : ""}.` + (purge ? ` It also deletes these kv tables and all their data: ${tables.join(", ") || "none"}.` : " kv tables and secrets are kept."));
     if (!args.yes && !(await confirm(`Type ${pc.bold(stage.functionName)} to confirm:`, stage.functionName))) {
       ui.fail("Cancelled.");
       process.exitCode = 1;

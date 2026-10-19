@@ -1,7 +1,10 @@
+import { ACMClient } from "@aws-sdk/client-acm";
+import { CloudFrontClient } from "@aws-sdk/client-cloudfront";
 import { CloudWatchLogsClient } from "@aws-sdk/client-cloudwatch-logs";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { IAMClient } from "@aws-sdk/client-iam";
 import { LambdaWebClient } from "@aws-sdk/client-lambda-web";
+import { Route53Client } from "@aws-sdk/client-route-53";
 import { S3Client } from "@aws-sdk/client-s3";
 import { SSMClient } from "@aws-sdk/client-ssm";
 import { GetCallerIdentityCommand, STSClient } from "@aws-sdk/client-sts";
@@ -20,6 +23,10 @@ export const aws = {
   ssm: (region: string) => memo(`ssm:${region}`, () => new SSMClient({ region })),
   logs: (region: string) => memo(`logs:${region}`, () => new CloudWatchLogsClient({ region })),
   iam: () => memo("iam", () => new IAMClient({ region: "us-east-1" })),
+  // CloudFront, its certificates (ACM) and Route 53 are global; their APIs live in us-east-1.
+  cloudfront: () => memo("cf", () => new CloudFrontClient({ region: "us-east-1" })),
+  acm: () => memo("acm", () => new ACMClient({ region: "us-east-1" })),
+  route53: () => memo("r53", () => new Route53Client({ region: "us-east-1" })),
   sts: (region: string) => memo(`sts:${region}`, () => new STSClient({ region })),
 };
 
@@ -36,7 +43,7 @@ export async function accountId(region: string): Promise<string> {
 
 export function isNotFound(err: unknown): boolean {
   const name = (err as { name?: string })?.name ?? "";
-  return /NotFound|NoSuchEntity|NoSuchBucket|ParameterNotFound/.test(name) || (err as any)?.$metadata?.httpStatusCode === 404;
+  return /NotFound|NoSuch/.test(name) || (err as any)?.$metadata?.httpStatusCode === 404;
 }
 
 export function pollInterval(): number {

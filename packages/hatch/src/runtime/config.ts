@@ -4,6 +4,20 @@ export interface StageConfig {
   /** Overrides the top-level regions for this stage. */
   regions?: string[];
   env?: Record<string, string>;
+  /**
+   * Custom domain for this stage, like "app.example.com". Hatch requests the certificate and, when
+   * the domain's zone is in Route 53, writes the DNS records. Otherwise it prints them for you.
+   */
+  domain?: string;
+}
+
+export interface StaticConfig {
+  /** Folder with the built frontend, relative to the project root. Uploaded to S3 on every deploy. */
+  dir: string;
+  /** Command that builds `dir`, run before upload. For example "npm run build --prefix web". */
+  build?: string;
+  /** Single-page app: paths without a file extension serve index.html. Default true. */
+  spa?: boolean;
 }
 
 export interface HatchConfig {
@@ -23,6 +37,16 @@ export interface HatchConfig {
   /** Plain (non-secret) environment variables for every stage. */
   env?: Record<string, string>;
   stages?: Record<string, StageConfig>;
+  /**
+   * Frontend files served from S3 through CloudFront on the same domain as the server.
+   * Requests matching `routes` go to the server; everything else is served from `dir`.
+   */
+  static?: StaticConfig;
+  /**
+   * CloudFront path patterns sent to the server when `static` is set. Default ["/api/*"].
+   * Without `static`, every path goes to the server.
+   */
+  routes?: string[];
   /**
    * Service principal in the execution role's trust policy. The launch docs don't name one for
    * Web Functions yet; override if AWS rejects the default.

@@ -8,4 +8,4 @@ export { secret, secretEnvVar } from "./secret.js";
 export { region, currentContext, runtimeInfo } from "./context.js";
 export type { RequestContext } from "./context.js";
 export { defineConfig, SUPPORTED_REGIONS } from "./config.js";
-export type { HatchConfig, StageConfig } from "./config.js";
+export type { HatchConfig, StageConfig, StaticConfig } from "./config.js";

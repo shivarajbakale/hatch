@@ -20,6 +20,7 @@ export const statusCommand = defineCommand({
     }
     ui.plain(`${pc.bold(stage.functionName)}  ${s.url ? pc.green(s.url) : pc.dim("no URL yet")}  ${pc.dim(s.endpointState ?? "")}`);
     ui.plain(pc.dim(`regions: ${s.regions.join(", ")}`));
+    if (s.frontDoor) ui.plain(`front door: ${pc.green(s.frontDoor.url)}` + pc.dim(` (CloudFront ${s.frontDoor.status ?? ""}${s.frontDoor.aliases.length ? `, ${s.frontDoor.cloudfrontUrl}` : ""})`));
     const weight = new Map(s.weights.map((w) => [w.revisionId, w.weight]));
     const rows = [["REVISION", "TRAFFIC", "STATE", "CREATED", "DESCRIPTION"].map((h) => pc.dim(h))];
     for (const r of s.revisions.slice(0, 8)) {
