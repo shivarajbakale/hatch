@@ -1,0 +1,19 @@
+{
+  "name": "{{name}}",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "hatch dev",
+    "deploy": "hatch deploy",
+    "doctor": "hatch doctor"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "hatch": "{{hatchVersion}}"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^24.0.0",
+    "typescript": "^7.0.0"
+  }
+}

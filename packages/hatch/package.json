@@ -1,0 +1,52 @@
+{
+  "name": "hatch",
+  "version": "0.1.0",
+  "description": "Deploy Node web apps to AWS Lambda Web Functions in your own AWS account.",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "hatch": "./dist/cli/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/runtime/index.d.ts",
+      "default": "./dist/runtime/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "pretest": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cloudwatch-logs": "^3.1152.0",
+    "@aws-sdk/client-dynamodb": "^3.1152.0",
+    "@aws-sdk/client-iam": "^3.1152.0",
+    "@aws-sdk/client-lambda-web": "^3.1152.0",
+    "@aws-sdk/client-s3": "^3.1152.0",
+    "@aws-sdk/client-ssm": "^3.1152.0",
+    "@aws-sdk/client-sts": "^3.1152.0",
+    "citty": "^0.2.2",
+    "esbuild": "^0.28.2",
+    "fflate": "^0.8.3",
+    "jiti": "^2.7.0",
+    "oxc-parser": "^0.154.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.5",
+    "aws-sdk-client-mock": "^4.1.0",
+    "express": "^5.3.0",
+    "hono": "^4.13.13",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}

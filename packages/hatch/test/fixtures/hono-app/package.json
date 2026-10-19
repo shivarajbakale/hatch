@@ -1,0 +1,6 @@
+{
+  "name": "hono-fixture",
+  "private": true,
+  "type": "module",
+  "dependencies": { "hatch": "*", "hono": "*" }
+}

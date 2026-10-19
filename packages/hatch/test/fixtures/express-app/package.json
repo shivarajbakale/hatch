@@ -1,0 +1,6 @@
+{
+  "name": "express-fixture",
+  "private": true,
+  "type": "module",
+  "dependencies": { "hatch": "*", "express": "*" }
+}

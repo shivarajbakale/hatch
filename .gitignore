@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.hatch/
+*.tgz
+.env
+.env.local
+.memsearch/

@@ -1,0 +1,18 @@
+{
+  "name": "{{name}}",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "hatch dev",
+    "deploy": "hatch deploy",
+    "doctor": "hatch doctor"
+  },
+  "dependencies": {
+    "hatch": "{{hatchVersion}}",
+    "hono": "^4.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^7.0.0"
+  }
+}

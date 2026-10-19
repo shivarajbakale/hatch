@@ -1,0 +1,26 @@
+{
+  "name": "create-hatch",
+  "version": "0.1.0",
+  "description": "Scaffold a Hatch app for AWS Lambda Web Functions",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "create-hatch": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsc -p tsconfig.json && node --test test/*.test.js"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "typescript": "^7.0.2"
+  }
+}
